@@ -1,0 +1,185 @@
+import { redis, SESSION_TTL } from '../config/redis.js';
+import type { Participant, Session } from '../types/index.js';
+import { logger } from '../utils/logger.js';
+
+class SessionService {
+  private getSessionKey(sessionId: string): string {
+    return `session:${sessionId}`;
+  }
+
+  async createSession(sessionId: string, sessionData: Session): Promise<Session> {
+    try {
+      const key = this.getSessionKey(sessionId);
+      await redis.setex(key, SESSION_TTL, JSON.stringify(sessionData));
+      logger.info(`Session created: ${sessionId}`);
+      return sessionData;
+    } catch (error) {
+      logger.error('Error creating session:', error);
+      throw error;
+    }
+  }
+
+  async getSession(sessionId: string): Promise<Session | null> {
+    try {
+      const key = this.getSessionKey(sessionId);
+      const data = await redis.get(key);
+      
+      if (!data) {
+        return null;
+      }
+      
+      return JSON.parse(data) as Session;
+    } catch (error) {
+      logger.error('Error getting session:', error);
+      throw error;
+    }
+  }
+
+  async updateSession(sessionId: string, sessionData: Session): Promise<Session> {
+    try {
+      const key = this.getSessionKey(sessionId);
+      await redis.setex(key, SESSION_TTL, JSON.stringify(sessionData));
+      return sessionData;
+    } catch (error) {
+      logger.error('Error updating session:', error);
+      throw error;
+    }
+  }
+
+  async addParticipant(sessionId: string, participant: Participant): Promise<Session> {
+    try {
+      const session = await this.getSession(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      session.participants[participant.id] = participant;
+      await this.updateSession(sessionId, session);
+      
+      logger.info(`Participant ${participant.name} joined session ${sessionId}`);
+      return session;
+    } catch (error) {
+      logger.error('Error adding participant:', error);
+      throw error;
+    }
+  }
+
+  async updateParticipant(
+    sessionId: string, 
+    participantId: string, 
+    updates: Partial<Participant>
+  ): Promise<Session> {
+    try {
+      const session = await this.getSession(sessionId);
+      if (!session || !session.participants[participantId]) {
+        throw new Error('Session or participant not found');
+      }
+
+      session.participants[participantId] = {
+        ...session.participants[participantId],
+        ...updates
+      };
+
+      await this.updateSession(sessionId, session);
+      return session;
+    } catch (error) {
+      logger.error('Error updating participant:', error);
+      throw error;
+    }
+  }
+
+  async castVote(sessionId: string, participantId: string, vote: string): Promise<Session> {
+    return this.updateParticipant(sessionId, participantId, { vote });
+  }
+
+  async revealVotes(sessionId: string): Promise<Session> {
+    try {
+      const session = await this.getSession(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      session.votesRevealed = true;
+      await this.updateSession(sessionId, session);
+      
+      logger.info(`Votes revealed in session ${sessionId}`);
+      return session;
+    } catch (error) {
+      logger.error('Error revealing votes:', error);
+      throw error;
+    }
+  }
+
+  async hideVotes(sessionId: string): Promise<Session> {
+    try {
+      const session = await this.getSession(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      session.votesRevealed = false;
+      await this.updateSession(sessionId, session);
+      
+      logger.info(`Votes hidden in session ${sessionId}`);
+      return session;
+    } catch (error) {
+      logger.error('Error hiding votes:', error);
+      throw error;
+    }
+  }
+
+  async resetVotes(sessionId: string): Promise<Session> {
+    try {
+      const session = await this.getSession(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      Object.values(session.participants).forEach(participant => {
+        participant.vote = null;
+      });
+
+      session.votesRevealed = false;
+      session.currentStory = '';
+
+      await this.updateSession(sessionId, session);
+      
+      logger.info(`Votes reset in session ${sessionId}`);
+      return session;
+    } catch (error) {
+      logger.error('Error resetting votes:', error);
+      throw error;
+    }
+  }
+
+  async updateStory(sessionId: string, story: string): Promise<Session> {
+    try {
+      const session = await this.getSession(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      session.currentStory = story;
+      await this.updateSession(sessionId, session);
+      
+      return session;
+    } catch (error) {
+      logger.error('Error updating story:', error);
+      throw error;
+    }
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    try {
+      const key = this.getSessionKey(sessionId);
+      await redis.del(key);
+      logger.info(`Session deleted: ${sessionId}`);
+    } catch (error) {
+      logger.error('Error deleting session:', error);
+      throw error;
+    }
+  }
+}
+
+export const sessionService = new SessionService();
+export default sessionService;
