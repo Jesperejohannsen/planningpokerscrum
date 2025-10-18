@@ -9,6 +9,14 @@ export interface Participant {
     isHost: boolean;
     connected: boolean;
   }
+
+  export interface StoryResult {
+    story: string;
+    votes: Record<string, { name: string; vote: string }>;
+    timestamp: number;
+    averageVote: string;
+    consensus: boolean;
+  }
   
   export interface Session {
     id: string;
@@ -18,6 +26,7 @@ export interface Participant {
     votesRevealed: boolean;
     participants: Record<string, Participant>;
     createdAt: number;
+    storyHistory: StoryResult[];
   }
   
   export interface VoteStatistics {

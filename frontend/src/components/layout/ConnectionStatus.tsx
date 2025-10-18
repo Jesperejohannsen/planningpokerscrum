@@ -1,24 +1,28 @@
-import { Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff, Zap } from 'lucide-react';
 
 interface ConnectionStatusProps {
   connected: boolean;
 }
 
-/**
- * Connection status indicator
- */
 export function ConnectionStatus({ connected }: ConnectionStatusProps) {
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className={`
+      flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
+      ${connected 
+        ? 'bg-neon-green/10 text-neon-green border border-neon-green/30' 
+        : 'bg-red-500/10 text-red-400 border border-red-500/30 animate-pulse'
+      }
+    `}>
       {connected ? (
         <>
-          <Wifi className="w-4 h-4 text-green-500" />
-          <span className="text-green-600">Connected</span>
+          <Wifi className="w-4 h-4" />
+          <Zap className="w-3 h-3 animate-pulse" />
+          <span>Connected</span>
         </>
       ) : (
         <>
-          <WifiOff className="w-4 h-4 text-red-500" />
-          <span className="text-red-600">Reconnecting...</span>
+          <WifiOff className="w-4 h-4" />
+          <span>Reconnecting...</span>
         </>
       )}
     </div>

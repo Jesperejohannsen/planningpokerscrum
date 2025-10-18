@@ -1,4 +1,4 @@
-import { Eye, EyeOff, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Zap } from 'lucide-react';
 
 interface HostControlsProps {
   votesRevealed: boolean;
@@ -20,21 +20,22 @@ export function HostControls({
   onResetVotes
 }: HostControlsProps) {
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="cyber-card rounded-2xl p-6 animate-slide-up">
       <div className="flex gap-4 flex-wrap">
         <button
           onClick={votesRevealed ? onHideVotes : onRevealVotes}
           disabled={!allVoted && !votesRevealed}
-          className="flex-1 min-w-[200px] flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[200px] flex items-center justify-center gap-3 bg-gradient-to-r from-neon-green to-emerald-500 text-dark-900 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed neon-button shadow-lg hover:shadow-neon-green/50"
         >
           {votesRevealed ? (
             <>
-              <EyeOff className="w-5 h-5" />
+              <EyeOff className="w-6 h-6" />
               Hide Votes
             </>
           ) : (
             <>
-              <Eye className="w-5 h-5" />
+              <Eye className="w-6 h-6" />
+              <Zap className="w-4 h-4" />
               Reveal Votes
             </>
           )}
@@ -42,17 +43,18 @@ export function HostControls({
         
         <button
           onClick={onResetVotes}
-          className="flex-1 min-w-[200px] flex items-center justify-center gap-2 bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition"
+          className="flex-1 min-w-[200px] flex items-center justify-center gap-3 glass text-white py-4 rounded-xl font-bold text-lg hover:scale-105 transition-all duration-300 border-2 border-white/10 hover:border-neon-purple/50 neon-button"
         >
-          <RotateCcw className="w-5 h-5" />
+          <RotateCcw className="w-6 h-6" />
           New Round
         </button>
       </div>
       
       {!allVoted && !votesRevealed && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800 text-center">
-            Waiting for all participants to vote... ({votedCount}/{participantsCount})
+        <div className="mt-4 p-4 glass rounded-xl border border-neon-yellow/30">
+          <p className="text-sm text-neon-yellow text-center flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-neon-yellow rounded-full animate-pulse"></div>
+            Waiting for votes... ({votedCount}/{participantsCount})
           </p>
         </div>
       )}
