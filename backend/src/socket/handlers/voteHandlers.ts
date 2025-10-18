@@ -97,7 +97,15 @@ export async function handleResetVotes(
       return;
     }
 
+    // ← ADD THIS DEBUG LOG
+    console.log('🔄 Resetting votes. Current story:', session.currentStory);
+    console.log('🔄 Votes revealed:', session.votesRevealed);
+    console.log('🔄 History length before:', session.storyHistory?.length || 0);
+
     const updatedSession = await sessionService.resetVotes(sessionId);
+    
+    // ← ADD THIS DEBUG LOG
+    console.log('✅ After reset. History length:', updatedSession.storyHistory?.length || 0);
     
     io.to(sessionId).emit(SERVER_EVENTS.VOTES_RESET, { session: updatedSession });
     

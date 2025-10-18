@@ -134,14 +134,76 @@ class SessionService {
       if (!session) {
         throw new Error('Session not found');
       }
-
+  
+      // ← ADD DEBUG LOG
+      console.log('🔄 BEFORE saving - Story:', session.currentStory);
+      console.log('🔄 BEFORE saving - Revealed:', session.votesRevealed);
+  
+      // Save current story BEFORE resetting (if conditions are met)
+      if (session.votesRevealed) {
+        console.log('💾 Saving story to history...');
+        // Proceed with saving logic
+      
+        // Collect votes
+        const votes: Record<string, { name: string; vote: string }> = {};
+        const numericVotes: number[] = [];
+  
+        Object.values(session.participants).forEach(participant => {
+          if (participant.vote !== null) {
+            votes[participant.id] = {
+              name: participant.name,
+              vote: participant.vote
+            };
+  
+            const numVote = parseFloat(participant.vote);
+            if (!isNaN(numVote)) {
+              numericVotes.push(numVote);
+            }
+          }
+        });
+  
+        // Calculate average
+        let averageVote = '—';
+        if (numericVotes.length > 0) {
+          const avg = numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
+          averageVote = avg.toFixed(1);
+        }
+  
+        // Check consensus
+        const uniqueVotes = new Set(Object.values(votes).map(v => v.vote));
+        const consensus = uniqueVotes.size === 1;
+  
+        // Create story result
+        const storyResult = {
+          story: session.currentStory,
+          votes,
+          timestamp: Date.now(),
+          averageVote,
+          consensus
+        };
+  
+        // Initialize history if needed
+        if (!session.storyHistory) {
+          session.storyHistory = [];
+        }
+  
+        // Add to history
+        session.storyHistory.push(storyResult);
+        
+        console.log('✅ Story saved! History length:', session.storyHistory.length);
+        console.log('📜 Latest story:', storyResult.story);
+      } else {
+        console.log('❌ Not saving - Story empty or votes not revealed');
+      }
+  
+      // NOW reset everything
       Object.values(session.participants).forEach(participant => {
         participant.vote = null;
       });
-
+  
       session.votesRevealed = false;
       session.currentStory = '';
-
+  
       await this.updateSession(sessionId, session);
       
       logger.info(`Votes reset in session ${sessionId}`);
@@ -161,8 +223,10 @@ class SessionService {
 
       session.currentStory = story;
       await this.updateSession(sessionId, session);
-      
+      console.log('✅ Saved story result. History now has', session.storyHistory.length, 'items');
+      logger.info(`Story result saved for session ${sessionId}`);
       return session;
+            
     } catch (error) {
       logger.error('Error updating story:', error);
       throw error;

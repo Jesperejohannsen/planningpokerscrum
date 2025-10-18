@@ -28,7 +28,8 @@ export async function handleCreateSession(
           connected: true
         }
       },
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      storyHistory: []  // ← ADD THIS LINE
     };
 
     await sessionService.createSession(sessionId, session);
