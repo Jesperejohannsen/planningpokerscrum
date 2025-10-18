@@ -1,6 +1,6 @@
-import redis from '../backend/src/config/redis.ts';
-import { logger } from '../backend/src/utils/logger.ts';
 import { httpServer } from './app.js';
+import redis from './config/redis.js';
+import { logger } from './utils/logger.js';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
