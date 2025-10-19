@@ -1,4 +1,5 @@
 import type { Socket } from 'socket.io';
+import { isUsernameTaken, validateUsername } from '../../middleware/validation.js';
 import { sessionService } from '../../services/sessionService.js';
 import type { CreateSessionData, JoinSessionData, Participant, Session } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -52,10 +53,25 @@ export async function handleJoinSession(
   socketSessions: Map<string, string>
 ): Promise<void> {
   try {
-    const session = await sessionService.getSession(sessionId);
     
+    
+    const validation = validateUsername(userName);
+    if (!validation.isValid) {
+      socket.emit(SERVER_EVENTS.ERROR, { message: validation.error });
+      return;
+    }
+  
+    const session = await sessionService.getSession(sessionId);
+
     if (!session) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Session not found' });
+      return;
+    }
+
+    if (isUsernameTaken(session, userName, socket.id)) {
+      socket.emit(SERVER_EVENTS.ERROR, { 
+        message: 'This username is already taken in this session. Please choose another name.' 
+      });
       return;
     }
 

@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { ErrorNotification } from './components/layout/ErrorNotification';
 import { useSession } from './hooks/useSession';
 import { useSocket } from './hooks/useSocket';
+import { clearSession, loadSession, saveSession, updateLastActive } from './utils/sessionStorage';
 import { CreateSessionView } from './views/CreateSessionView';
 import { Home } from './views/Home';
 import { JoinSessionView } from './views/JoinSessionView';
@@ -18,9 +20,11 @@ export default function App() {
     userName,
     setUserName,
     sessionId,
+    setSessionId,
     session,
     myVote,
     isHost,
+    setIsHost,
     createSession,
     joinSession,
     castVote,
@@ -30,6 +34,68 @@ export default function App() {
     updateStory
   } = sessionState;
 
+  // Check for stored session on mount and attempt reconnection
+  useEffect(() => {
+    const storedSession = loadSession();
+    
+    if (storedSession && socket) {
+      console.log('Found stored session, attempting to reconnect...', storedSession);
+      
+      // Restore session state
+      setSessionId(storedSession.sessionId);
+      setUserName(storedSession.userName);
+      setIsHost(storedSession.isHost);
+      
+      // Attempt to rejoin the session
+      socket.emit('joinSession', {
+        sessionId: storedSession.sessionId,
+        userName: storedSession.userName
+      });
+      
+      setView('session');
+    }
+  }, [socket]); // Only run when socket is ready
+
+  // Save session to localStorage whenever it changes
+  useEffect(() => {
+    if (view === 'session' && sessionId && userName) {
+      saveSession({
+        sessionId,
+        userName,
+        isHost,
+        lastActive: Date.now()
+      });
+    }
+  }, [sessionId, userName, isHost, view]);
+
+  // Update last active timestamp every minute
+  useEffect(() => {
+    if (view === 'session') {
+      const interval = setInterval(() => {
+        updateLastActive();
+      }, 60000); // Update every minute
+
+      return () => clearInterval(interval);
+    }
+  }, [view]);
+
+  // Handle leaving session
+  const handleLeaveSession = () => {
+    clearSession();
+    setView('home');
+    setSessionId('');
+    setUserName('');
+    setIsHost(false);
+    setSessionName('');
+  };
+
+  // Clear session on error (session not found, etc.)
+  useEffect(() => {
+    if (error && error.includes('not found')) {
+      clearSession();
+    }
+  }, [error]);
+
   if (view === 'home') {
     return (
       <>
@@ -38,7 +104,7 @@ export default function App() {
           onNavigate={setView}
           error={error}
         />
-        <ErrorNotification error={error} />
+        <ErrorNotification error={error || ''} />
       </>
     );
   }
@@ -54,7 +120,7 @@ export default function App() {
           onSubmit={createSession}
           onBack={() => setView('home')}
         />
-        <ErrorNotification error={error} />
+        <ErrorNotification error={error ||  ''} />
       </>
     );
   }
@@ -67,8 +133,9 @@ export default function App() {
           userName={userName}
           setUserName={setUserName}
           onSubmit={joinSession}
+          onBack={() => setView('home')}
         />
-        <ErrorNotification error={error} />
+        <ErrorNotification error={error || ''} />
       </>
     );
   }
@@ -87,8 +154,9 @@ export default function App() {
           onHideVotes={hideVotes}
           onResetVotes={resetVotes}
           onUpdateStory={updateStory}
+          onLeaveSession={handleLeaveSession}
         />
-        <ErrorNotification error={error} />
+        <ErrorNotification error={error || ''} />
       </>
     );
   }

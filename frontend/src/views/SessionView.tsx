@@ -16,6 +16,7 @@ interface SessionViewProps {
   onHideVotes: () => void;
   onResetVotes: () => void;
   onUpdateStory: (story: string) => void;
+  onLeaveSession?: () => void;  // ADD THIS LINE
 }
 
 export function SessionView({
@@ -28,7 +29,8 @@ export function SessionView({
   onRevealVotes,
   onHideVotes,
   onResetVotes,
-  onUpdateStory
+  onUpdateStory,
+  onLeaveSession  // ADD THIS
 }: SessionViewProps) {
   if (!session) {
     return (
@@ -71,6 +73,7 @@ export function SessionView({
           isHost={isHost}
           connected={connected}
           onUpdateStory={onUpdateStory}
+          onLeaveSession={onLeaveSession}  // PASS IT HERE
         />
 
         <ParticipantsList

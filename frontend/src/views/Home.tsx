@@ -5,7 +5,7 @@ import type { ViewType } from '../types';
 interface HomeProps {
   connected: boolean;
   onNavigate: (view: ViewType) => void;
-  error: string;
+  error: string | null;
 }
 
 export function Home({ connected, onNavigate, error }: HomeProps) {

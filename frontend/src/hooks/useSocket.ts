@@ -1,66 +1,56 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { SERVER_EVENTS } from '../constants/events';
 
-interface UseSocketReturn {
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+
+export interface UseSocketReturn {
   socket: Socket | null;
   connected: boolean;
-  error: string;
-  setError: (error: string) => void;
+  error: string | null;
+  setError: (error: string | null) => void;  // CHANGED: Accept null
 }
 
-/**
- * Custom hook for Socket.IO connection
- */
 export function useSocket(): UseSocketReturn {
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  const [error, setError] = useState('');
-  const socketRef = useRef<Socket | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
-
-    socketRef.current = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+    const socketInstance = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
-      timeout: 20000
+      reconnectionAttempts: 5
     });
 
-    const socket = socketRef.current;
-
-    socket.on(SERVER_EVENTS.CONNECT, () => {
+    socketInstance.on('connect', () => {
+      console.log('Socket connected:', socketInstance.id);
       setConnected(true);
-      setError('');
-      console.log('✅ Connected to server:', socket.id);
+      setError(null);
     });
 
-    socket.on(SERVER_EVENTS.DISCONNECT, (reason: string) => {
+    socketInstance.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
       setConnected(false);
-      console.log('❌ Disconnected:', reason);
+      
+      if (reason === 'io server disconnect') {
+        // Server disconnected us, try to reconnect
+        socketInstance.connect();
+      }
     });
 
-    socket.on(SERVER_EVENTS.CONNECT_ERROR, (err: Error) => {
-      console.error('Connection error:', err.message);
-      setError('Failed to connect to server');
-      setTimeout(() => setError(''), 5000);
+    socketInstance.on('connect_error', (err) => {
+      console.error('Connection error:', err);
+      setConnected(false);
+      setError('Connection failed. Retrying...');
     });
+
+    setSocket(socketInstance);
 
     return () => {
-      if (socket) {
-        socket.disconnect();
-      }
+      socketInstance.disconnect();
     };
   }, []);
 
-  return {
-    socket: socketRef.current,
-    connected,
-    error,
-    setError
-  };
+  return { socket, connected, error, setError };
 }
-
-export default useSocket;
