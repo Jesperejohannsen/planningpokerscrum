@@ -35,8 +35,6 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null
     });
-    
-    // Optionally reload the page
     window.location.reload();
   };
 
@@ -59,7 +57,6 @@ export class ErrorBoundary extends Component<Props, State> {
               The application encountered an unexpected error. Don't worry, your session data is safe.
             </p>
             
-            {/* REMOVE process.env check - just always show in dev mode based on import.meta.env */}
             {import.meta.env.DEV && this.state.error && (
               <div className="glass rounded-lg p-4 mb-6 text-left">
                 <p className="text-xs text-red-400 font-mono break-all">
