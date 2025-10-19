@@ -37,7 +37,6 @@ export function useSession(
   const [myVote, setMyVote] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
 
-  // Handle URL parameters for joining
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const joinSessionId = params.get('join');
@@ -48,7 +47,6 @@ export function useSession(
     }
   }, []);
 
-  // Socket event listeners
   useEffect(() => {
     if (!socket) return;
 
@@ -59,7 +57,6 @@ export function useSession(
       setView('session');
       setError(null);
       
-      // Update URL
       window.history.pushState({}, '', `?session=${newSessionId}`);
     });
 
@@ -68,14 +65,12 @@ export function useSession(
       setView('session');
       setError(null);
       
-      // Update URL
       window.history.pushState({}, '', `?session=${joinedSession.id}`);
     });
 
     socket.on(SERVER_EVENTS.SESSION_UPDATE, ({ session: updatedSession }: { session: Session }) => {
       setSession(updatedSession);
       
-      // Update my vote if it changed
       if (socket.id && updatedSession.participants[socket.id]) {
         setMyVote(updatedSession.participants[socket.id].vote);
       }
@@ -188,11 +183,11 @@ export function useSession(
     userName,
     setUserName,
     sessionId,
-    setSessionId,  // EXPORT THIS
+    setSessionId, 
     session,
     myVote,
     isHost,
-    setIsHost,  // EXPORT THIS
+    setIsHost,  
     createSession,
     joinSession,
     castVote,

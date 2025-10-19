@@ -16,7 +16,7 @@ interface SessionViewProps {
   onHideVotes: () => void;
   onResetVotes: () => void;
   onUpdateStory: (story: string) => void;
-  onLeaveSession?: () => void;  // ADD THIS LINE
+  onLeaveSession?: () => void; 
 }
 
 export function SessionView({
@@ -30,7 +30,7 @@ export function SessionView({
   onHideVotes,
   onResetVotes,
   onUpdateStory,
-  onLeaveSession  // ADD THIS
+  onLeaveSession  
 }: SessionViewProps) {
   if (!session) {
     return (
@@ -60,7 +60,6 @@ export function SessionView({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 bg-cyber-grid p-4 relative overflow-hidden">
-      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-neon-blue opacity-5 rounded-full filter blur-3xl animate-pulse-slow"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-neon-purple opacity-5 rounded-full filter blur-3xl animate-pulse-slow"></div>
@@ -73,7 +72,7 @@ export function SessionView({
           isHost={isHost}
           connected={connected}
           onUpdateStory={onUpdateStory}
-          onLeaveSession={onLeaveSession}  // PASS IT HERE
+          onLeaveSession={onLeaveSession} 
         />
 
         <ParticipantsList
@@ -99,7 +98,6 @@ export function SessionView({
           />
         )}
 
-       {/* Story History - Shows for everyone */}
         {session.storyHistory && session.storyHistory.length > 0 && (
           <StoryHistory history={session.storyHistory} />
         )}

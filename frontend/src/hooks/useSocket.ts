@@ -34,7 +34,6 @@ export function useSocket(): UseSocketReturn {
       setConnected(false);
       
       if (reason === 'io server disconnect') {
-        // Server disconnected us, try to reconnect
         socketInstance.connect();
       }
     });

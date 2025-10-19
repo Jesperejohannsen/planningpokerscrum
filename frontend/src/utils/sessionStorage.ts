@@ -1,7 +1,3 @@
-/**
- * Session storage utilities for persisting user session
- */
-
 export interface StoredSession {
     sessionId: string;
     userName: string;
@@ -12,9 +8,6 @@ export interface StoredSession {
   const STORAGE_KEY = 'planningPoker_session';
   const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
   
-  /**
-   * Save session to localStorage
-   */
   export function saveSession(session: StoredSession): void {
     try {
       const data = {
@@ -27,9 +20,6 @@ export interface StoredSession {
     }
   }
   
-  /**
-   * Load session from localStorage
-   */
   export function loadSession(): StoredSession | null {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -37,7 +27,6 @@ export interface StoredSession {
   
       const session: StoredSession = JSON.parse(stored);
       
-      // Check if session is expired
       const isExpired = Date.now() - session.lastActive > EXPIRY_TIME;
       if (isExpired) {
         clearSession();
@@ -51,9 +40,6 @@ export interface StoredSession {
     }
   }
   
-  /**
-   * Clear session from localStorage
-   */
   export function clearSession(): void {
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -62,9 +48,6 @@ export interface StoredSession {
     }
   }
   
-  /**
-   * Update last active timestamp
-   */
   export function updateLastActive(): void {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -78,9 +61,6 @@ export interface StoredSession {
     }
   }
   
-  /**
-   * Check if there's a valid stored session
-   */
   export function hasValidSession(): boolean {
     const session = loadSession();
     return session !== null;

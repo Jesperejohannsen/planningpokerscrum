@@ -34,19 +34,16 @@ export default function App() {
     updateStory
   } = sessionState;
 
-  // Check for stored session on mount and attempt reconnection
   useEffect(() => {
     const storedSession = loadSession();
     
     if (storedSession && socket) {
       console.log('Found stored session, attempting to reconnect...', storedSession);
       
-      // Restore session state
       setSessionId(storedSession.sessionId);
       setUserName(storedSession.userName);
       setIsHost(storedSession.isHost);
       
-      // Attempt to rejoin the session
       socket.emit('joinSession', {
         sessionId: storedSession.sessionId,
         userName: storedSession.userName
@@ -54,9 +51,8 @@ export default function App() {
       
       setView('session');
     }
-  }, [socket]); // Only run when socket is ready
+  }, [socket]); 
 
-  // Save session to localStorage whenever it changes
   useEffect(() => {
     if (view === 'session' && sessionId && userName) {
       saveSession({
@@ -68,7 +64,6 @@ export default function App() {
     }
   }, [sessionId, userName, isHost, view]);
 
-  // Update last active timestamp every minute
   useEffect(() => {
     if (view === 'session') {
       const interval = setInterval(() => {
@@ -79,7 +74,6 @@ export default function App() {
     }
   }, [view]);
 
-  // Handle leaving session
   const handleLeaveSession = () => {
     clearSession();
     setView('home');
@@ -89,7 +83,6 @@ export default function App() {
     setSessionName('');
   };
 
-  // Clear session on error (session not found, etc.)
   useEffect(() => {
     if (error && error.includes('not found')) {
       clearSession();

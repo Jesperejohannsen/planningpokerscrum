@@ -5,7 +5,7 @@ interface JoinSessionViewProps {
   userName: string;
   setUserName: (name: string) => void;
   onSubmit: () => void;
-  onBack?: () => void;  // ADD THIS
+  onBack?: () => void; 
 }
 
 export function JoinSessionView({
