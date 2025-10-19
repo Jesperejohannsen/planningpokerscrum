@@ -13,7 +13,6 @@ export async function handleCreateSession(
   socketSessions: Map<string, string>
 ): Promise<void> {
   try {
-    // Rate limiting
     if (!createSessionLimiter.isAllowed(socket.id)) {
       socket.emit(SERVER_EVENTS.ERROR, { 
         message: 'Too many sessions created. Please wait a moment.' 
@@ -21,14 +20,12 @@ export async function handleCreateSession(
       return;
     }
 
-    // Validate session name
     const sessionValidation = validateSessionName(sessionName);
     if (!sessionValidation.isValid) {
       socket.emit(SERVER_EVENTS.ERROR, { message: sessionValidation.error });
       return;
     }
 
-    // Validate username
     const userValidation = validateUsername(userName);
     if (!userValidation.isValid) {
       socket.emit(SERVER_EVENTS.ERROR, { message: userValidation.error });
@@ -76,7 +73,6 @@ export async function handleJoinSession(
   socketSessions: Map<string, string>
 ): Promise<void> {
   try {
-    // Rate limiting
     if (!joinSessionLimiter.isAllowed(socket.id)) {
       socket.emit(SERVER_EVENTS.ERROR, { 
         message: 'Too many join attempts. Please wait a moment.' 
@@ -84,7 +80,6 @@ export async function handleJoinSession(
       return;
     }
 
-    // Validate username
     const validation = validateUsername(userName);
     if (!validation.isValid) {
       socket.emit(SERVER_EVENTS.ERROR, { message: validation.error });
@@ -98,7 +93,6 @@ export async function handleJoinSession(
       return;
     }
 
-    // Check if username is already taken by a connected user
     if (isUsernameTaken(session, userName, socket.id)) {
       socket.emit(SERVER_EVENTS.ERROR, { 
         message: 'This username is already taken in this session. Please choose another name.' 
@@ -106,12 +100,10 @@ export async function handleJoinSession(
       return;
     }
 
-    // Check if user is reconnecting (same name, disconnected)
     const existingParticipant = Object.values(session.participants)
       .find(p => p.name.toLowerCase() === userName.trim().toLowerCase() && !p.connected);
 
     if (existingParticipant) {
-      // Reconnecting user
       delete session.participants[existingParticipant.id];
       existingParticipant.id = socket.id;
       existingParticipant.connected = true;
@@ -119,7 +111,6 @@ export async function handleJoinSession(
       
       logger.info(`User ${userName} reconnected to session ${sessionId}`);
     } else {
-      // New user joining
       session.participants[socket.id] = {
         id: socket.id,
         name: userName.trim(),
