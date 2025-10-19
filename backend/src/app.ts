@@ -19,25 +19,29 @@ import { logger } from './utils/logger.js';
 const app = express();
 const httpServer = createServer(app);
 
+// CORS Configuration - Environment-aware
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [
+      process.env.CLIENT_URL || 'https://your-production-domain.com',
+      // Add your production domain here when deploying
+    ]
+  : [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5174'
+    ];
+
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:5173',  // Add Vite dev server
-    'http://localhost:5174'   // Backup port
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
 
-// Socket.IO setup with updated CORS
+// Socket.IO setup with environment-aware CORS
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:5173',  // Add Vite dev server
-      'http://localhost:5174'   // Backup port
-    ],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   }

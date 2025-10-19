@@ -1,7 +1,8 @@
 import type { Socket } from 'socket.io';
-import { isUsernameTaken, validateUsername } from '../../middleware/validation.js';
+import { createSessionLimiter, joinSessionLimiter } from '../../middleware/rateLimiter.js';
+import { isUsernameTaken, validateSessionName, validateUsername } from '../../middleware/validation.js';
 import { sessionService } from '../../services/sessionService.js';
-import type { CreateSessionData, JoinSessionData, Participant, Session } from '../../types/index.js';
+import type { CreateSessionData, JoinSessionData, Session } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { generateSessionId } from '../../utils/sessionId.js';
 import { SERVER_EVENTS } from '../events.js';
@@ -12,25 +13,47 @@ export async function handleCreateSession(
   socketSessions: Map<string, string>
 ): Promise<void> {
   try {
+    // Rate limiting
+    if (!createSessionLimiter.isAllowed(socket.id)) {
+      socket.emit(SERVER_EVENTS.ERROR, { 
+        message: 'Too many sessions created. Please wait a moment.' 
+      });
+      return;
+    }
+
+    // Validate session name
+    const sessionValidation = validateSessionName(sessionName);
+    if (!sessionValidation.isValid) {
+      socket.emit(SERVER_EVENTS.ERROR, { message: sessionValidation.error });
+      return;
+    }
+
+    // Validate username
+    const userValidation = validateUsername(userName);
+    if (!userValidation.isValid) {
+      socket.emit(SERVER_EVENTS.ERROR, { message: userValidation.error });
+      return;
+    }
+
     const sessionId = generateSessionId();
     
     const session: Session = {
       id: sessionId,
-      name: sessionName,
+      name: sessionName.trim(),
       hostId: socket.id,
       currentStory: '',
       votesRevealed: false,
       participants: {
         [socket.id]: {
           id: socket.id,
-          name: userName,
+          name: userName.trim(),
           vote: null,
           isHost: true,
           connected: true
         }
       },
-      createdAt: Date.now(),
-      storyHistory: []  // ← ADD THIS LINE
+      storyHistory: [],
+      createdAt: Date.now()
     };
 
     await sessionService.createSession(sessionId, session);
@@ -53,21 +76,29 @@ export async function handleJoinSession(
   socketSessions: Map<string, string>
 ): Promise<void> {
   try {
-    
-    
+    // Rate limiting
+    if (!joinSessionLimiter.isAllowed(socket.id)) {
+      socket.emit(SERVER_EVENTS.ERROR, { 
+        message: 'Too many join attempts. Please wait a moment.' 
+      });
+      return;
+    }
+
+    // Validate username
     const validation = validateUsername(userName);
     if (!validation.isValid) {
       socket.emit(SERVER_EVENTS.ERROR, { message: validation.error });
       return;
     }
-  
-    const session = await sessionService.getSession(sessionId);
 
+    const session = await sessionService.getSession(sessionId);
+    
     if (!session) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Session not found' });
       return;
     }
 
+    // Check if username is already taken by a connected user
     if (isUsernameTaken(session, userName, socket.id)) {
       socket.emit(SERVER_EVENTS.ERROR, { 
         message: 'This username is already taken in this session. Please choose another name.' 
@@ -75,34 +106,38 @@ export async function handleJoinSession(
       return;
     }
 
+    // Check if user is reconnecting (same name, disconnected)
     const existingParticipant = Object.values(session.participants)
-      .find(p => p.name === userName && !p.connected);
+      .find(p => p.name.toLowerCase() === userName.trim().toLowerCase() && !p.connected);
 
     if (existingParticipant) {
+      // Reconnecting user
       delete session.participants[existingParticipant.id];
       existingParticipant.id = socket.id;
       existingParticipant.connected = true;
       session.participants[socket.id] = existingParticipant;
+      
+      logger.info(`User ${userName} reconnected to session ${sessionId}`);
     } else {
-      const newParticipant: Participant = {
+      // New user joining
+      session.participants[socket.id] = {
         id: socket.id,
-        name: userName,
+        name: userName.trim(),
         vote: null,
         isHost: false,
         connected: true
       };
-      session.participants[socket.id] = newParticipant;
+      
+      logger.info(`User ${userName} joined session ${sessionId}`);
     }
 
-    const updatedSession = await sessionService.updateSession(sessionId, session);
+    await sessionService.updateSession(sessionId, session);
     
     socket.join(sessionId);
     socketSessions.set(socket.id, sessionId);
 
-    socket.emit(SERVER_EVENTS.SESSION_JOINED, { session: updatedSession });
-    socket.to(sessionId).emit(SERVER_EVENTS.PARTICIPANT_UPDATE, { session: updatedSession });
-    
-    logger.info(`${userName} joined session ${sessionId}`);
+    socket.emit(SERVER_EVENTS.SESSION_JOINED, { session });
+    socket.to(sessionId).emit(SERVER_EVENTS.SESSION_UPDATE, { session });
   } catch (error) {
     logger.error('Error in handleJoinSession:', error);
     socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to join session' });
@@ -113,28 +148,26 @@ export async function handleDisconnect(
   socket: Socket,
   socketSessions: Map<string, string>
 ): Promise<void> {
-  const sessionId = socketSessions.get(socket.id);
-  
-  if (sessionId) {
-    try {
+  try {
+    const sessionId = socketSessions.get(socket.id);
+    
+    if (sessionId) {
       const session = await sessionService.getSession(sessionId);
       
       if (session && session.participants[socket.id]) {
-        const updatedSession = await sessionService.updateParticipant(
-          sessionId,
-          socket.id,
-          { connected: false }
-        );
+        session.participants[socket.id].connected = false;
         
-        socket.to(sessionId).emit(SERVER_EVENTS.PARTICIPANT_UPDATE, { session: updatedSession });
+        await sessionService.updateSession(sessionId, session);
         
-        logger.info(`Participant ${socket.id} disconnected from session ${sessionId}`);
+        socket.to(sessionId).emit(SERVER_EVENTS.USER_DISCONNECTED, { session });
+        
+        logger.info(`User disconnected from session ${sessionId}`);
       }
-    } catch (error) {
-      logger.error('Error in handleDisconnect:', error);
     }
     
     socketSessions.delete(socket.id);
+  } catch (error) {
+    logger.error('Error in handleDisconnect:', error);
   }
 }
 

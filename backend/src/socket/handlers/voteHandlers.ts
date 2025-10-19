@@ -1,4 +1,6 @@
 import type { Server, Socket } from 'socket.io';
+import { voteLimiter } from '../../middleware/rateLimiter.js';
+import { validateVote } from '../../middleware/validation.js';
 import { sessionService } from '../../services/sessionService.js';
 import type { CastVoteData, SessionActionData } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -10,6 +12,21 @@ export async function handleCastVote(
   { sessionId, vote }: CastVoteData
 ): Promise<void> {
   try {
+    // Rate limiting
+    if (!voteLimiter.isAllowed(socket.id)) {
+      socket.emit(SERVER_EVENTS.ERROR, { 
+        message: 'Too many votes. Please slow down.' 
+      });
+      return;
+    }
+
+    // Validate vote
+    const validation = validateVote(vote);
+    if (!validation.isValid) {
+      socket.emit(SERVER_EVENTS.ERROR, { message: validation.error });
+      return;
+    }
+
     const session = await sessionService.castVote(sessionId, socket.id, vote);
     
     io.to(sessionId).emit(SERVER_EVENTS.VOTE_UPDATE, { session });
@@ -34,6 +51,7 @@ export async function handleRevealVotes(
       return;
     }
 
+    // Verify host
     if (session.hostId !== socket.id) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Only host can reveal votes' });
       return;
@@ -63,6 +81,7 @@ export async function handleHideVotes(
       return;
     }
 
+    // Verify host
     if (session.hostId !== socket.id) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Only host can hide votes' });
       return;
@@ -92,20 +111,13 @@ export async function handleResetVotes(
       return;
     }
 
+    // Verify host
     if (session.hostId !== socket.id) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Only host can reset votes' });
       return;
     }
 
-    // ← ADD THIS DEBUG LOG
-    console.log('🔄 Resetting votes. Current story:', session.currentStory);
-    console.log('🔄 Votes revealed:', session.votesRevealed);
-    console.log('🔄 History length before:', session.storyHistory?.length || 0);
-
     const updatedSession = await sessionService.resetVotes(sessionId);
-    
-    // ← ADD THIS DEBUG LOG
-    console.log('✅ After reset. History length:', updatedSession.storyHistory?.length || 0);
     
     io.to(sessionId).emit(SERVER_EVENTS.VOTES_RESET, { session: updatedSession });
     
