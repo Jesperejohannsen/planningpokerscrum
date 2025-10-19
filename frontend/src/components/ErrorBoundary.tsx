@@ -28,9 +28,6 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: any): void {
     console.error('Error caught by boundary:', error, errorInfo);
-    
-    // You could send this to an error tracking service like Sentry
-    // logErrorToService(error, errorInfo);
   }
 
   handleReset = (): void => {
