@@ -2,7 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import sessionService from './services/sessionService.js';
+import { sessionService } from './services/sessionService.js';
 import { CLIENT_EVENTS } from './socket/events.js';
 import { handleCreateSession, handleDisconnect, handleJoinSession } from './socket/handlers/sessionHandlers.js';
 import { handleUpdateStory } from './socket/handlers/storyHandlers.js';
@@ -19,21 +19,38 @@ import { logger } from './utils/logger.js';
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors());
+// Middleware
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',  // Add Vite dev server
+    'http://localhost:5174'   // Backup port
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
+// Socket.IO setup with updated CORS
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST']
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',  // Add Vite dev server
+      'http://localhost:5174'   // Backup port
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
+// Track socket to session mapping
 const socketSessions = new Map<string, string>();
 
+// Socket.IO connection handler
 io.on('connection', (socket) => {
   logger.info(`Client connected: ${socket.id}`);
 
+  // Session events
   socket.on(CLIENT_EVENTS.CREATE_SESSION, (data: CreateSessionData) => {
     handleCreateSession(socket, data, socketSessions);
   });
@@ -42,6 +59,7 @@ io.on('connection', (socket) => {
     handleJoinSession(socket, data, socketSessions);
   });
 
+  // Vote events
   socket.on(CLIENT_EVENTS.CAST_VOTE, (data: CastVoteData) => {
     handleCastVote(socket, io, data);
   });
@@ -58,16 +76,19 @@ io.on('connection', (socket) => {
     handleResetVotes(socket, io, data);
   });
 
+  // Story events
   socket.on(CLIENT_EVENTS.UPDATE_STORY, (data: UpdateStoryData) => {
     handleUpdateStory(socket, io, data);
   });
 
+  // Disconnect event
   socket.on(CLIENT_EVENTS.DISCONNECT, () => {
     handleDisconnect(socket, socketSessions);
     logger.info(`Client disconnected: ${socket.id}`);
   });
 });
 
+// REST API endpoints
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
