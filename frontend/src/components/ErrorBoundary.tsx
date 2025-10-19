@@ -1,5 +1,5 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Component, type ReactNode } from 'react'; // FIX: type-only import
+import { Component, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
