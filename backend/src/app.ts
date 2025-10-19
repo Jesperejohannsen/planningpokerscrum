@@ -19,11 +19,9 @@ import { logger } from './utils/logger.js';
 const app = express();
 const httpServer = createServer(app);
 
-// CORS Configuration - Environment-aware
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [
       process.env.CLIENT_URL || 'https://your-production-domain.com',
-      // Add your production domain here when deploying
     ]
   : [
       'http://localhost:3000',
@@ -31,14 +29,12 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
       'http://localhost:5174'
     ];
 
-// Middleware
 app.use(cors({
   origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
 
-// Socket.IO setup with environment-aware CORS
 const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
@@ -47,14 +43,11 @@ const io = new Server(httpServer, {
   }
 });
 
-// Track socket to session mapping
 const socketSessions = new Map<string, string>();
 
-// Socket.IO connection handler
 io.on('connection', (socket) => {
   logger.info(`Client connected: ${socket.id}`);
 
-  // Session events
   socket.on(CLIENT_EVENTS.CREATE_SESSION, (data: CreateSessionData) => {
     handleCreateSession(socket, data, socketSessions);
   });
@@ -63,7 +56,6 @@ io.on('connection', (socket) => {
     handleJoinSession(socket, data, socketSessions);
   });
 
-  // Vote events
   socket.on(CLIENT_EVENTS.CAST_VOTE, (data: CastVoteData) => {
     handleCastVote(socket, io, data);
   });
@@ -80,19 +72,16 @@ io.on('connection', (socket) => {
     handleResetVotes(socket, io, data);
   });
 
-  // Story events
   socket.on(CLIENT_EVENTS.UPDATE_STORY, (data: UpdateStoryData) => {
     handleUpdateStory(socket, io, data);
   });
 
-  // Disconnect event
   socket.on(CLIENT_EVENTS.DISCONNECT, () => {
     handleDisconnect(socket, socketSessions);
     logger.info(`Client disconnected: ${socket.id}`);
   });
 });
 
-// REST API endpoints
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
