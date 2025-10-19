@@ -135,16 +135,12 @@ class SessionService {
         throw new Error('Session not found');
       }
   
-      // ← ADD DEBUG LOG
       console.log('🔄 BEFORE saving - Story:', session.currentStory);
       console.log('🔄 BEFORE saving - Revealed:', session.votesRevealed);
   
-      // Save current story BEFORE resetting (if conditions are met)
       if (session.votesRevealed) {
         console.log('💾 Saving story to history...');
-        // Proceed with saving logic
       
-        // Collect votes
         const votes: Record<string, { name: string; vote: string }> = {};
         const numericVotes: number[] = [];
   
@@ -162,18 +158,15 @@ class SessionService {
           }
         });
   
-        // Calculate average
         let averageVote = '—';
         if (numericVotes.length > 0) {
           const avg = numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
           averageVote = avg.toFixed(1);
         }
   
-        // Check consensus
         const uniqueVotes = new Set(Object.values(votes).map(v => v.vote));
         const consensus = uniqueVotes.size === 1;
   
-        // Create story result
         const storyResult = {
           story: session.currentStory,
           votes,
@@ -182,12 +175,10 @@ class SessionService {
           consensus
         };
   
-        // Initialize history if needed
         if (!session.storyHistory) {
           session.storyHistory = [];
         }
   
-        // Add to history
         session.storyHistory.push(storyResult);
         
         console.log('✅ Story saved! History length:', session.storyHistory.length);
@@ -196,7 +187,6 @@ class SessionService {
         console.log('❌ Not saving - Story empty or votes not revealed');
       }
   
-      // NOW reset everything
       Object.values(session.participants).forEach(participant => {
         participant.vote = null;
       });
