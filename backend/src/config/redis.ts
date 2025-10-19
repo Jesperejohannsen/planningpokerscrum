@@ -1,9 +1,9 @@
-import { Redis } from 'ioredis';
+import Redis from 'ioredis';
 import { logger } from '../utils/logger.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-export const redis = new Redis(REDIS_URL, { // Use the imported module as a constructor
+export const redis = new Redis(REDIS_URL, {
   retryStrategy: (times: number): number | null => {
     const delay = Math.min(times * 50, 2000);
     return delay;
