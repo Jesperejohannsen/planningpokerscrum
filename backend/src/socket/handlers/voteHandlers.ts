@@ -12,7 +12,6 @@ export async function handleCastVote(
   { sessionId, vote }: CastVoteData
 ): Promise<void> {
   try {
-    // Rate limiting
     if (!voteLimiter.isAllowed(socket.id)) {
       socket.emit(SERVER_EVENTS.ERROR, { 
         message: 'Too many votes. Please slow down.' 
@@ -20,7 +19,6 @@ export async function handleCastVote(
       return;
     }
 
-    // Validate vote
     const validation = validateVote(vote);
     if (!validation.isValid) {
       socket.emit(SERVER_EVENTS.ERROR, { message: validation.error });
@@ -51,7 +49,6 @@ export async function handleRevealVotes(
       return;
     }
 
-    // Verify host
     if (session.hostId !== socket.id) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Only host can reveal votes' });
       return;
@@ -81,7 +78,6 @@ export async function handleHideVotes(
       return;
     }
 
-    // Verify host
     if (session.hostId !== socket.id) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Only host can hide votes' });
       return;
@@ -111,7 +107,6 @@ export async function handleResetVotes(
       return;
     }
 
-    // Verify host
     if (session.hostId !== socket.id) {
       socket.emit(SERVER_EVENTS.ERROR, { message: 'Only host can reset votes' });
       return;
