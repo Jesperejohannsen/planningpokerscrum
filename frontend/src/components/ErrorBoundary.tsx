@@ -10,9 +10,6 @@ interface State {
   error: Error | null;
 }
 
-/**
- * Error Boundary to catch React errors gracefully
- */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
