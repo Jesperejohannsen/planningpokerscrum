@@ -11,11 +11,11 @@ export interface UseSessionReturn {
   userName: string;
   setUserName: (name: string) => void;
   sessionId: string;
-  setSessionId: (id: string) => void;  // ADD THIS
+  setSessionId: (id: string) => void;
   session: Session | null;
   myVote: string | null;
   isHost: boolean;
-  setIsHost: (isHost: boolean) => void;  // ADD THIS
+  setIsHost: (isHost: boolean) => void;
   createSession: () => void;
   joinSession: () => void;
   castVote: (vote: string) => void;
@@ -101,6 +101,31 @@ export function useSession(
       setSession(updatedSession);
     });
 
+    socket.on(SERVER_EVENTS.USER_REMOVED, ({ session: updatedSession, removedUserId, reason }: { 
+      session: Session; 
+      removedUserId: string; 
+      reason: string;
+    }) => {
+      console.log(`User ${removedUserId} removed: ${reason}`);
+      setSession(updatedSession);
+      
+    });
+
+    socket.on(SERVER_EVENTS.HOST_CHANGED, ({ session: updatedSession, newHostId, newHostName }: { 
+      session: Session; 
+      newHostId: string; 
+      newHostName: string;
+    }) => {
+      console.log(`New host: ${newHostName} (${newHostId})`);
+      setSession(updatedSession);
+      
+      if (socket.id === newHostId) {
+        setIsHost(true);
+        console.log('🎉 You are now the host!');
+      } else {
+      }
+    });
+
     socket.on(SERVER_EVENTS.ERROR, ({ message }) => {
       setError(message);
       setTimeout(() => setError(null), 5000);
@@ -116,6 +141,8 @@ export function useSession(
       socket.off(SERVER_EVENTS.VOTES_RESET);
       socket.off(SERVER_EVENTS.STORY_UPDATE);
       socket.off(SERVER_EVENTS.USER_DISCONNECTED);
+      socket.off(SERVER_EVENTS.USER_REMOVED);     
+      socket.off(SERVER_EVENTS.HOST_CHANGED);     
       socket.off(SERVER_EVENTS.ERROR);
     };
   }, [socket, setError]);

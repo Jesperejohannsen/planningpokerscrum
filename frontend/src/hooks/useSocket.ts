@@ -7,7 +7,7 @@ export interface UseSocketReturn {
   socket: Socket | null;
   connected: boolean;
   error: string | null;
-  setError: (error: string | null) => void;  // CHANGED: Accept null
+  setError: (error: string | null) => void;  
 }
 
 export function useSocket(): UseSocketReturn {
