@@ -21,6 +21,8 @@ export const SERVER_EVENTS = {
   VOTES_HIDDEN: 'votesHidden',
   VOTES_RESET: 'votesReset',
   STORY_UPDATE: 'storyUpdate',
+  USER_REMOVED: 'userRemoved',
+  HOST_CHANGED: 'hostChanged',
   USER_DISCONNECTED: 'userDisconnected', 
   ERROR: 'error'
 } as const;
