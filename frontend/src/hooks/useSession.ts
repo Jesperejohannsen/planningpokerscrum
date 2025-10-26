@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import type { Socket } from 'socket.io-client';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../constants/events';
 import type { Session } from '../types';
@@ -121,8 +122,9 @@ export function useSession(
       
       if (socket.id === newHostId) {
         setIsHost(true);
-        console.log('🎉 You are now the host!');
+        toast.success('You are now the host! 👑');
       } else {
+        toast.info(`${newHostName} is now the host 👑`);
       }
     });
 
