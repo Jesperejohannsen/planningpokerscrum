@@ -3,8 +3,8 @@ import { sessionService } from '../services/sessionService.js';
 import { SERVER_EVENTS } from '../socket/events.js';
 import { logger } from './logger.js';
 
-const INACTIVE_TIMEOUT = 10 * 60 * 1000;
-const CLEANUP_INTERVAL = 60 * 1000;
+const INACTIVE_TIMEOUT = 2 * 60 * 1000;
+const CLEANUP_INTERVAL = 60 * 1000; 
 
 interface DisconnectionTracker {
   [sessionId: string]: {
