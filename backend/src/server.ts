@@ -1,11 +1,19 @@
-import { httpServer } from './app.js';
+import { httpServer, io } from './app.js';
 import redis from './config/redis.js';
+import { startInactiveUserCleanup, stopInactiveUserCleanup } from './utils/inactiveUserCleanup.js';
 import { logger } from './utils/logger.js';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
+let cleanupInterval: NodeJS.Timeout | null = null;
+
 function gracefulShutdown(signal: string): void {
   logger.info(`${signal} received, shutting down gracefully...`);
+  
+  if (cleanupInterval) {
+    stopInactiveUserCleanup(cleanupInterval);
+    logger.info('Cleanup service stopped');
+  }
   
   httpServer.close(() => {
     logger.info('HTTP server closed');
@@ -26,6 +34,9 @@ httpServer.listen(PORT, () => {
   logger.info(`🚀 Planning Poker server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`🔗 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+  
+  cleanupInterval = startInactiveUserCleanup(io);
+  logger.info(`🧹 Inactive user cleanup service started (10 min timeout, checks every 1 min)`);
 });
 
 httpServer.on('error', (error: NodeJS.ErrnoException) => {
