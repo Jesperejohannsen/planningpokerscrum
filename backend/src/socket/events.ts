@@ -21,7 +21,9 @@ export const SERVER_EVENTS = {
   STORY_UPDATE: 'storyUpdate',
   USER_DISCONNECTED: 'userDisconnected', 
   ERROR: 'error',
-  DISCONNECT: 'disconnect'
+  DISCONNECT: 'disconnect',
+  USER_REMOVED: 'userRemoved',
+  HOST_CHANGED: 'hostChanged', 
 } as const;
 
 export type ClientEvent = typeof CLIENT_EVENTS[keyof typeof CLIENT_EVENTS];
