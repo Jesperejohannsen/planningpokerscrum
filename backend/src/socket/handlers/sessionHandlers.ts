@@ -3,6 +3,7 @@ import { createSessionLimiter, joinSessionLimiter } from '../../middleware/rateL
 import { validateSessionName, validateUsername } from '../../middleware/validation.js';
 import { sessionService } from '../../services/sessionService.js';
 import type { CreateSessionData, JoinSessionData, Session } from '../../types/index.js';
+import { clearDisconnectionTracking, trackDisconnection } from '../../utils/inactiveUserCleanup.js';
 import { logger } from '../../utils/logger.js';
 import { generateSessionId } from '../../utils/sessionId.js';
 import { SERVER_EVENTS } from '../events.js';
@@ -107,6 +108,8 @@ export async function handleJoinSession(
           isHost: existingParticipant.isHost,
           connected: true
         };
+
+        clearDisconnectionTracking(sessionId, existingParticipant.id);
         
         await sessionService.updateSession(sessionId, session);
         
@@ -161,6 +164,8 @@ export async function handleDisconnect(
       
       if (session && session.participants[socket.id]) {
         session.participants[socket.id].connected = false;
+        
+        trackDisconnection(sessionId, socket.id);
         
         await sessionService.updateSession(sessionId, session);
         
