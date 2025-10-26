@@ -25,6 +25,18 @@ export async function handleCastVote(
       return;
     }
 
+    const currentSession = await sessionService.getSession(sessionId);
+    
+    if (!currentSession) {
+      socket.emit(SERVER_EVENTS.ERROR, { message: 'Session not found' });
+      return;
+    }
+
+    if (currentSession.votesRevealed) {
+      socket.emit(SERVER_EVENTS.ERROR, { message: 'Cannot vote after votes are revealed' });
+      return;
+    }
+
     const session = await sessionService.castVote(sessionId, socket.id, vote);
     
     io.to(sessionId).emit(SERVER_EVENTS.VOTE_UPDATE, { session });
