@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io';
 import { createSessionLimiter, joinSessionLimiter } from '../../middleware/rateLimiter.js';
-import { isUsernameTaken, validateSessionName, validateUsername } from '../../middleware/validation.js';
+import { validateSessionName, validateUsername } from '../../middleware/validation.js';
 import { sessionService } from '../../services/sessionService.js';
 import type { CreateSessionData, JoinSessionData, Session } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -93,35 +93,47 @@ export async function handleJoinSession(
       return;
     }
 
-    if (isUsernameTaken(session, userName, socket.id)) {
-      socket.emit(SERVER_EVENTS.ERROR, { 
-        message: 'This username is already taken in this session. Please choose another name.' 
-      });
-      return;
-    }
-
     const existingParticipant = Object.values(session.participants)
-      .find(p => p.name.toLowerCase() === userName.trim().toLowerCase() && !p.connected);
+      .find(p => p.name.toLowerCase() === userName.trim().toLowerCase());
 
     if (existingParticipant) {
-      delete session.participants[existingParticipant.id];
-      existingParticipant.id = socket.id;
-      existingParticipant.connected = true;
-      session.participants[socket.id] = existingParticipant;
-      
-      logger.info(`User ${userName} reconnected to session ${sessionId}`);
-    } else {
-      session.participants[socket.id] = {
-        id: socket.id,
-        name: userName.trim(),
-        vote: null,
-        isHost: false,
-        connected: true
-      };
-      
-      logger.info(`User ${userName} joined session ${sessionId}`);
+      if (!existingParticipant.connected) {
+        delete session.participants[existingParticipant.id];
+        
+        session.participants[socket.id] = {
+          id: socket.id,
+          name: userName.trim(),
+          vote: existingParticipant.vote, 
+          isHost: existingParticipant.isHost,
+          connected: true
+        };
+        
+        await sessionService.updateSession(sessionId, session);
+        
+        socket.join(sessionId);
+        socketSessions.set(socket.id, sessionId);
+
+        socket.emit(SERVER_EVENTS.SESSION_JOINED, { session });
+        socket.to(sessionId).emit(SERVER_EVENTS.SESSION_UPDATE, { session });
+        
+        logger.info(`User ${userName} reconnected to session ${sessionId}`);
+        return; 
+      } else {
+        socket.emit(SERVER_EVENTS.ERROR, { 
+          message: 'This username is already taken in this session. Please choose another name.' 
+        });
+        return;
+      }
     }
 
+    session.participants[socket.id] = {
+      id: socket.id,
+      name: userName.trim(),
+      vote: null,
+      isHost: false,
+      connected: true
+    };
+    
     await sessionService.updateSession(sessionId, session);
     
     socket.join(sessionId);
@@ -129,6 +141,8 @@ export async function handleJoinSession(
 
     socket.emit(SERVER_EVENTS.SESSION_JOINED, { session });
     socket.to(sessionId).emit(SERVER_EVENTS.SESSION_UPDATE, { session });
+    
+    logger.info(`User ${userName} joined session ${sessionId}`);
   } catch (error) {
     logger.error('Error in handleJoinSession:', error);
     socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to join session' });
